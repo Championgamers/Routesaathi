@@ -61,7 +61,7 @@ module.exports = async function handler(req, res) {
     JSON.stringify(context).slice(0, 2500)
   ].join('\n');
 
-  const model = (process.env.GEMINI_MODEL || 'gemini-2.5-flash').trim();
+  const model = (process.env.GEMINI_MODEL || 'gemini-1.5-flash').trim();
   const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
 
   try {
