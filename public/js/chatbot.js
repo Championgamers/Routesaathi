@@ -212,42 +212,39 @@
       'Active RouteSaathi App Context: ' + JSON.stringify(context)
     ].join('\n');
 
-    const contents = [
-      ...recentHistory.map(m => ({
-        role: m.role === 'assistant' ? 'model' : 'user',
-        parts: [{ text: m.content }]
-      })),
-      { role: 'user', parts: [{ text: message }] }
-    ];
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${encodeURIComponent(apiKey)}`;
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
 
     try {
-      const resp = await fetch(url, {
+      const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${apiKey}`
+        },
         signal: controller.signal,
         body: JSON.stringify({
-          systemInstruction: { parts: [{ text: sysText }] },
-          contents,
-          generationConfig: { temperature: 0.6, maxOutputTokens: 512 }
+          model: 'llama-3.3-70b-versatile',
+          messages: [
+            { role: 'system', content: sysText },
+            ...recentHistory,
+            { role: 'user', content: message }
+          ],
+          temperature: 0.6,
+          max_tokens: 512
         })
       });
       const data = await resp.json().catch(() => ({}));
       if (!resp.ok) {
-        const apiMsg = data?.error?.message || `HTTP ${resp.status}`;
-        throw new Error(apiMsg);
+        throw new Error(data?.error?.message || `HTTP ${resp.status}`);
       }
-      const reply = data?.candidates?.[0]?.content?.parts?.map(p => p.text).join('').trim();
+      const reply = data?.choices?.[0]?.message?.content?.trim();
       if (!reply) throw new Error('The AI model returned an empty response. Please rephrase your question.');
       return reply;
     } finally {
       clearTimeout(timer);
     }
   }
-
   /* Primary production path: Vercel Serverless Function (/api/chat) */
   async function callServerlessApi(message, context, recentHistory) {
     const controller = new AbortController();
