@@ -1,48 +1,38 @@
 /**
- * RouteSaathi — Complete Chatbot Frontend (UI Toggle + Groq API Integration)
+ * RouteSaathi — Universal Robust Chatbot Controller
  */
 
-document.addEventListener('DOMContentLoaded', function () {
+(function () {
   const CHAT_ENDPOINT = '/api/chat';
 
-  // DOM Elements (Safely selected)
-  const chatToggleBtn = document.getElementById('chat-toggle') || document.querySelector('.chat-toggle-btn') || document.querySelector('[data-chat-toggle]');
-  const chatWindow = document.getElementById('chat-window') || document.getElementById('chatbot-container') || document.querySelector('.chatbot-box');
-  const chatCloseBtn = document.getElementById('chat-close') || document.querySelector('.chat-close-btn');
-  const chatForm = document.getElementById('chat-form') || document.querySelector('.chat-input-form');
-  const chatInput = document.getElementById('chat-input') || document.querySelector('.chat-text-input');
-  const chatMessages = document.getElementById('chat-messages') || document.querySelector('.chat-messages-area');
+  // Universal click listener: catches clicks on ANY chat toggle button or icon across the page
+  document.addEventListener('click', function (e) {
+    const toggleBtn = e.target.closest('#chat-toggle, .chat-toggle-btn, [data-chat-toggle], .chatbot-float-btn, #chatbot-icon, button[onclick*="Chat"]');
+    const closeBtn = e.target.closest('#chat-close, .chat-close-btn, [data-chat-close]');
+    const chatWindow = document.getElementById('chat-window') || document.getElementById('chatbot-container') || document.querySelector('.chatbot-box') || document.querySelector('.chat-popup');
 
-  // Toggle Chat Window Open/Close
-  function toggleChat() {
-    if (!chatWindow) return;
-    if (chatWindow.style.display === 'none' || chatWindow.style.display === '' || chatWindow.classList.contains('hidden')) {
-      chatWindow.style.display = 'flex';
-      chatWindow.classList.remove('hidden');
-      if (chatInput) chatInput.focus();
-    } else {
-      chatWindow.style.display = 'none';
-      chatWindow.classList.add('hidden');
-    }
-  }
-
-  // Event Listeners for UI
-  if (chatToggleBtn) {
-    chatToggleBtn.addEventListener('click', toggleChat);
-  }
-  // Fallback global handler if button uses onclick
-  window.toggleRouteSaathiChat = toggleChat;
-
-  if (chatCloseBtn) {
-    chatCloseBtn.addEventListener('click', function () {
-      if (chatWindow) {
+    if (toggleBtn && chatWindow) {
+      e.preventDefault();
+      const currentDisplay = window.getComputedStyle(chatWindow).display;
+      if (currentDisplay === 'none' || chatWindow.classList.contains('hidden')) {
+        chatWindow.style.display = 'flex';
+        chatWindow.classList.remove('hidden');
+        const input = chatWindow.querySelector('input, textarea');
+        if (input) input.focus();
+      } else {
         chatWindow.style.display = 'none';
         chatWindow.classList.add('hidden');
       }
-    });
-  }
+    }
 
-  // API Call to Groq Serverless Function
+    if (closeBtn && chatWindow) {
+      e.preventDefault();
+      chatWindow.style.display = 'none';
+      chatWindow.classList.add('hidden');
+    }
+  });
+
+  // Serverless API Communication
   async function callGroqServerless(message, context, recentHistory) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
@@ -64,10 +54,10 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   }
 
-  // Global export for any external scripts
+  // Global export
   window.RouteSaathiAI = {
     sendMessage: async function (message, context, history) {
       return await callGroqServerless(message, context, history);
     }
   };
-});
+})();
