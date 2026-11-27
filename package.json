@@ -1,0 +1,35 @@
+{
+  "name": "routesaathi",
+  "version": "1.0.0",
+  "description": "RouteSaathi \u2014 AI-Powered Smart Multi-Modal Travel & Delay Intelligence Web Application across India",
+  "private": true,
+  "scripts": {
+    "dev": "vercel dev",
+    "start": "npx serve public"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "keywords": [
+    "prompt-engineering",
+    "multi-modal-travel",
+    "india-travel",
+    "gemini-ai-chatbot",
+    "vercel-serverless"
+  ],
+  "license": "MIT",
+  "contributors": [
+    {
+      "name": "Arpit Ganeshaanand",
+      "enrollmentId": "25BCON2339"
+    },
+    {
+      "name": "Madhur Kumar",
+      "enrollmentId": "25BCON2463"
+    },
+    {
+      "name": "Sarthak Gupta",
+      "enrollmentId": "25BCON2424"
+    }
+  ]
+}
