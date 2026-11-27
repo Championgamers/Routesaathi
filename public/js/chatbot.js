@@ -1,6 +1,5 @@
 /**
  * RouteSaathi — Saathi AI Chatbot Frontend Controller
- * Perfectly matched with index.html IDs (#chatFab, #chatWidget, etc.)
  */
 
 (function () {
@@ -24,7 +23,6 @@
 
     if (!chatFab || !chatWidget) return;
 
-    // Toggle Chat Window Open/Close
     function toggleChat() {
       const isHidden = chatWidget.hidden;
       chatWidget.hidden = !isHidden;
@@ -40,20 +38,18 @@
     chatFab.addEventListener('click', toggleChat);
     if (chatClose) chatClose.addEventListener('click', toggleChat);
 
-    // Settings Toggle
     if (chatKeyToggle && chatSettings) {
       chatKeyToggle.addEventListener('click', () => {
         chatSettings.hidden = !chatSettings.hidden;
       });
     }
 
-    // Local Key Storage
     if (chatSaveKey && chatLocalKey) {
       chatSaveKey.addEventListener('click', () => {
         const val = chatLocalKey.value.trim();
         if (val) {
           localStorage.setItem('routesaathi_groq_key', val);
-          alert('Local API key saved successfully for this browser session!');
+          alert('Local API key saved successfully!');
           chatSettings.hidden = true;
         }
       });
@@ -67,16 +63,14 @@
       });
     }
 
-    // Clear Chat
     if (chatClear && chatMsgs) {
       chatClear.addEventListener('click', () => {
         chatMsgs.innerHTML = '';
         chatHistory = [];
-        appendMessage('assistant', 'Conversation cleared. How can I help you with your journey today?');
+        appendMessage('assistant', 'Conversation cleared. How can I help you today?');
       });
     }
 
-    // Append Message to UI
     function appendMessage(role, text) {
       if (!chatMsgs) return;
       const div = document.createElement('div');
@@ -86,7 +80,6 @@
       chatMsgs.scrollTop = chatMsgs.scrollHeight;
     }
 
-    // Quick prompt pills
     const samplePrompts = [
       'How do I pick a safe connection if direct trains are full?',
       'What are the best winter fog delay buffers for Delhi-Kanpur?',
@@ -109,7 +102,6 @@
       });
     }
 
-    // Handle Form Submission
     if (chatForm && chatInput) {
       chatForm.addEventListener('submit', async (e) => {
         e.preventDefault();
@@ -119,7 +111,6 @@
         appendMessage('user', text);
         chatInput.value = '';
 
-        // Gather current app context if available
         let currentContext = {};
         try {
           if (window.RouteSaathiApp && typeof window.RouteSaathiApp.getState === 'function') {
@@ -129,7 +120,6 @@
 
         const localKey = localStorage.getItem('routesaathi_groq_key') || '';
 
-        // Show loading indicator
         const loadingId = 'load_' + Date.now();
         const loadDiv = document.createElement('div');
         loadDiv.id = loadingId;
@@ -141,7 +131,6 @@
         try {
           let reply = '';
           if (localKey) {
-            // Direct call if local key provided
             const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
               method: 'POST',
               headers: {
@@ -149,7 +138,7 @@
                 'Authorization': `Bearer ${localKey}`
               },
               body: JSON.stringify({
-                model: 'llama3-8b-8192',
+                model: 'llama3-8b-8192', // UPDATED MODEL HERE
                 messages: [
                   { role: 'system', content: 'You are Saathi AI, expert Indian travel assistant for RouteSaathi.' },
                   ...chatHistory,
@@ -163,7 +152,6 @@
             if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
             reply = data?.choices?.[0]?.message?.content?.trim();
           } else {
-            // Standard Serverless Proxy Call (/api/chat)
             const resp = await fetch(CHAT_ENDPOINT, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
@@ -174,7 +162,6 @@
             reply = data.reply;
           }
 
-          // Remove loading
           const el = document.getElementById(loadingId);
           if (el) el.remove();
 
