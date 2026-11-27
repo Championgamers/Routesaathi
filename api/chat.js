@@ -1,7 +1,7 @@
 /**
- * RouteSaathi — Vercel Serverless Function (/api/chat)
- * Securely proxies chat requests to the Google Gemini API using
- * process.env.GEMINI_API_KEY with automatic model fallback.
+ * RouteSaathi — Vercel Serverless Function (/api/chat) using Groq API
+ * Securely proxies chat requests to Groq (Llama 3.3 70B) using
+ * process.env.GROQ_API_KEY so credentials are never exposed in GitHub or client JS.
  */
 
 const MAX_MESSAGE_CHARS = 800;
@@ -15,10 +15,10 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed. Use POST /api/chat.' });
   }
 
-  const apiKey = (process.env.GEMINI_API_KEY || '').trim();
+  const apiKey = (process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || '').trim();
   if (!apiKey) {
     return res.status(503).json({
-      error: 'GEMINI_API_KEY is not configured on the server. Add GEMINI_API_KEY in Vercel Project Settings -> Environment Variables and redeploy.'
+      error: 'GROQ_API_KEY is not configured on the server. Add GROQ_API_KEY in Vercel Project Settings -> Environment Variables and redeploy.'
     });
   }
 
@@ -42,12 +42,12 @@ module.exports = async function handler(req, res) {
         .slice(-MAX_HISTORY_ITEMS)
         .filter(item => item && typeof item.content === 'string' && (item.role === 'user' || item.role === 'assistant'))
         .map(item => ({
-          role: item.role === 'assistant' ? 'model' : 'user',
-          parts: [{ text: item.content.slice(0, MAX_MESSAGE_CHARS) }]
+          role: item.role,
+          content: item.content.slice(0, MAX_MESSAGE_CHARS)
         }))
     : [];
 
-  const systemInstruction = [
+  const systemPrompt = [
     'You are Saathi AI, an expert multi-modal Indian travel assistant integrated directly into the RouteSaathi web application.',
     'Core expertise: Indian Railways (train classes SL/3A/2A/CC, major hubs like NDLS, MMCT, HWH, JP, PNBE, DDU, BPL, Tatkal/waitlist backups), domestic Indian flights, intercity Volvo/AC sleeper buses, outstation cabs, transfer buffer safety, and seasonal Indian delays (North India winter fog Dec-Jan, monsoon Jul-Sep, festive rush Oct-Nov).',
     'Rules:',
@@ -61,58 +61,47 @@ module.exports = async function handler(req, res) {
     JSON.stringify(context).slice(0, 2500)
   ].join('\n');
 
-  const modelsToTry = [
-    process.env.GEMINI_MODEL,
-    'gemini-3.8-flash',
-    'gemini-flash-latest',
-    'gemini-2.0-flash'
-  ].filter(Boolean).map(m => m.trim());
+  const model = (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+  const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
-  let upstream, data = {}, usedModel = '';
   try {
-    for (const model of [...new Set(modelsToTry)]) {
-      usedModel = model;
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(model)}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      upstream = await fetch(endpoint, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          systemInstruction: { parts: [{ text: systemInstruction }] },
-          contents: [
-            ...safeHistory,
-            { role: 'user', parts: [{ text: rawMessage }] }
-          ],
-          generationConfig: {
-            temperature: 0.6,
-            maxOutputTokens: 512
-          }
-        })
-      });
-      data = await upstream.json().catch(() => ({}));
-      if (upstream.ok || (upstream.status !== 404 && upstream.status !== 400)) break;
-    }
+    const upstream = await fetch(endpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`
+      },
+      body: JSON.stringify({
+        model,
+        messages: [
+          { role: 'system', content: systemPrompt },
+          ...safeHistory,
+          { role: 'user', content: rawMessage }
+        ],
+        temperature: 0.6,
+        max_tokens: 512
+      })
+    });
 
-    if (!upstream || !upstream.ok) {
-      const status = upstream?.status === 429 ? 429 : 502;
-      const reason = upstream?.status === 429
-        ? 'AI API rate limit reached. Please wait a few seconds and try again.'
-        : data?.error?.message || `Upstream AI API error (${upstream?.status || 'unknown'}).`;
+    const data = await upstream.json().catch(() => ({}));
+
+    if (!upstream.ok) {
+      const status = upstream.status === 429 ? 429 : 502;
+      const reason = upstream.status === 429
+        ? 'Groq API rate limit reached. Please wait a few seconds and try again.'
+        : data?.error?.message || `Groq API error (${upstream.status}).`;
       return res.status(status).json({ error: reason });
     }
 
-    const reply = data?.candidates?.[0]?.content?.parts
-      ?.map(part => part.text || '')
-      .join('')
-      .trim();
-
+    const reply = data?.choices?.[0]?.message?.content?.trim();
     if (!reply) {
-      return res.status(502).json({ error: 'The AI model returned an empty response. Please try rephrasing.' });
+      return res.status(502).json({ error: 'Groq returned an empty response. Please try rephrasing.' });
     }
 
-    return res.status(200).json({ reply, model: usedModel });
+    return res.status(200).json({ reply, model });
   } catch (err) {
     return res.status(504).json({
-      error: 'Could not connect to the Gemini API. Please try again in a moment.'
+      error: 'Could not connect to the Groq API. Please try again in a moment.'
     });
   }
 };
