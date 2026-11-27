@@ -1,7 +1,6 @@
 /**
  * RouteSaathi — Vercel Serverless Function (/api/chat) using Groq API
- * Securely proxies chat requests to Groq (Llama 3.3 70B) using
- * process.env.GROQ_API_KEY so credentials are never exposed in GitHub or client JS.
+ * Securely proxies chat requests to Groq using process.env.GROQ_API_KEY
  */
 
 const MAX_MESSAGE_CHARS = 800;
@@ -15,7 +14,7 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed. Use POST /api/chat.' });
   }
 
-  const apiKey = (process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY || '').trim();
+  const apiKey = (process.env.GROQ_API_KEY || '').trim();
   if (!apiKey) {
     return res.status(503).json({
       error: 'GROQ_API_KEY is not configured on the server. Add GROQ_API_KEY in Vercel Project Settings -> Environment Variables and redeploy.'
@@ -49,19 +48,18 @@ module.exports = async function handler(req, res) {
 
   const systemPrompt = [
     'You are Saathi AI, an expert multi-modal Indian travel assistant integrated directly into the RouteSaathi web application.',
-    'Core expertise: Indian Railways (train classes SL/3A/2A/CC, major hubs like NDLS, MMCT, HWH, JP, PNBE, DDU, BPL, Tatkal/waitlist backups), domestic Indian flights, intercity Volvo/AC sleeper buses, outstation cabs, transfer buffer safety, and seasonal Indian delays (North India winter fog Dec-Jan, monsoon Jul-Sep, festive rush Oct-Nov).',
+    'Core expertise: Indian Railways, domestic flights, Volvo buses, cabs, transfer safety, and seasonal fog/monsoon delays.',
     'Rules:',
     '1. Ground your recommendations in the active RouteSaathi route context when provided (origin, destination, top calculated routes, cost, duration, delay risk).',
     '2. Respond concisely (typically 80-180 words) using clear bullet points when comparing options.',
     '3. Match the user language (English or Hindi/Hinglish).',
     '4. Never invent real-time PNR or live seat counts; remind users to confirm live seats via the IRCTC, ixigo, redBus, or Google Flights links inside RouteSaathi.',
-    '5. If a question is completely unrelated to travel, geography, or RouteSaathi, politely steer the user back to travel planning.',
     '',
     'Current RouteSaathi Session Context:',
     JSON.stringify(context).slice(0, 2500)
   ].join('\n');
 
-  const model = (process.env.GROQ_MODEL || 'llama-3.3-70b-versatile').trim();
+  const model = (process.env.GROQ_MODEL || 'llama-3.1-8b-instant').trim();
   const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
   try {
