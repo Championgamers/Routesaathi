@@ -1,6 +1,6 @@
 /**
  * RouteSaathi — Vercel Serverless Function (/api/chat) using Groq API
- * Uses llama3-8b-8192 model which is fully supported on free Groq keys.
+ * Uses the active llama-3.1-8b-instant model.
  */
 
 const MAX_MESSAGE_CHARS = 800;
@@ -59,7 +59,7 @@ module.exports = async function handler(req, res) {
     JSON.stringify(context).slice(0, 2500)
   ].join('\n');
 
-  const model = 'llama3-8b-8192';
+  const model = 'llama-3.1-8b-instant';
   const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
   try {
@@ -103,3 +103,4 @@ module.exports = async function handler(req, res) {
     });
   }
 };
+
