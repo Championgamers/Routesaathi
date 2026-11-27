@@ -203,12 +203,11 @@
   }
 
   /* Direct browser call ONLY when user explicitly configures a session key for local testing */
-  async function callGeminiDirect(message, context, recentHistory, apiKey) {
+async function callGeminiDirect(message, context, recentHistory, apiKey) {
     const sysText = [
       'You are Saathi AI, the official multi-modal Indian travel assistant inside the RouteSaathi web application.',
-      'Give concise, practical, accurate advice about Indian trains (IRCTC classes, junctions, Tatkal/WL), domestic flights, intercity Volvo buses, outstation cabs, connection buffer safety, and seasonal delays (winter fog, monsoon).',
-      'Always respond in the user language (English or Hindi). Keep answers crisp (under 180 words) with bullet points when comparing options.',
-      'Do not fabricate live seat numbers; clearly mention that live availability should be confirmed on IRCTC/ixigo/redBus/Google Flights.',
+      'Give concise, practical, accurate advice about Indian trains, domestic flights, intercity Volvo buses, outstation cabs, connection buffer safety, and seasonal delays (winter fog, monsoon).',
+      'Always respond in the user language (English or Hindi). Keep answers crisp with bullet points when comparing options.',
       'Active RouteSaathi App Context: ' + JSON.stringify(context)
     ].join('\n');
 
@@ -224,7 +223,7 @@
         },
         signal: controller.signal,
         body: JSON.stringify({
-          model: 'llama-3.3-70b-versatile',
+          model: 'llama3-8b-8192',
           messages: [
             { role: 'system', content: sysText },
             ...recentHistory,
