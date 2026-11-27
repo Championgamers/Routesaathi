@@ -1,10 +1,14 @@
 /**
  * RouteSaathi — Vercel Serverless Function (/api/chat) using Groq API
- * Uses llama-3.1-70b-versatile model.
+ * Permanent solution with hardcoded key and flagship model.
  */
 
 const MAX_MESSAGE_CHARS = 800;
 const MAX_HISTORY_ITEMS = 10;
+
+// PERMANENT HARDCODED CONFIGURATION (No Vercel Env Variables Needed)
+const HARDCODED_GROQ_KEY = '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';
+const MODEL_NAME = 'llama-3.3-70b-versatile';
 
 module.exports = async function handler(req, res) {
   res.setHeader('Content-Type', 'application/json; charset=utf-8');
@@ -14,10 +18,10 @@ module.exports = async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed. Use POST /api/chat.' });
   }
 
-  const apiKey = (process.env.GROQ_API_KEY || '').trim();
-  if (!apiKey) {
+  const apiKey = (process.env.GROQ_API_KEY || HARDCODED_GROQ_KEY).trim();
+  if (!apiKey || apiKey.includes('YOUR_ACTUAL_GROQ_KEY')) {
     return res.status(503).json({
-      error: 'GROQ_API_KEY is not configured on the server. Add GROQ_API_KEY in Vercel Project Settings -> Environment Variables and redeploy.'
+      error: 'API key is not configured. Please put your real gsk_ key inside api/chat.js.'
     });
   }
 
@@ -59,7 +63,6 @@ module.exports = async function handler(req, res) {
     JSON.stringify(context).slice(0, 2500)
   ].join('\n');
 
-  const model = 'llama-3.1-70b-versatile';
   const endpoint = 'https://api.groq.com/openai/v1/chat/completions';
 
   try {
@@ -70,7 +73,7 @@ module.exports = async function handler(req, res) {
         'Authorization': `Bearer ${apiKey}`
       },
       body: JSON.stringify({
-        model,
+        model: MODEL_NAME,
         messages: [
           { role: 'system', content: systemPrompt },
           ...safeHistory,
@@ -96,7 +99,7 @@ module.exports = async function handler(req, res) {
       return res.status(502).json({ error: 'Groq returned an empty response. Please try rephrasing.' });
     }
 
-    return res.status(200).json({ reply, model });
+    return res.status(200).json({ reply, model: MODEL_NAME });
   } catch (err) {
     return res.status(504).json({
       error: 'Could not connect to the Groq API. Please try again in a moment.'
