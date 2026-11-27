@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="theme-color" content="#f7f8f2">
+    <meta name="description" content="Compare stays across booking platforms and find the right trip for you with Routesaathi.">
+    <title>Routesaathi — Find your kind of stay</title>
+    <link rel="icon" href="data:,">
+    <link rel="stylesheet" href="styles.css">
+    <script src="app.js" defer></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="#" aria-label="Routesaathi home">
+        <span class="brand-mark" aria-hidden="true">r</span>
+        <span>routesaathi</span>
+      </a>
+      <nav class="main-nav" aria-label="Main navigation">
+        <a class="active" href="#search">Find a stay</a>
+        <a href="#how-it-works">How it works</a>
+      </nav>
+      <a class="header-link" href="#search">Plan a trip <span aria-hidden="true">↗</span></a>
+    </header>
+
+    <main>
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero-copy">
+          <p class="eyebrow"><span class="sparkle" aria-hidden="true">✳</span> A better way to get away</p>
+          <h1 id="hero-title">The right stay.<br><span>Not the endless scroll.</span></h1>
+          <p class="hero-description">Tell our AI trip sidekick what you’re looking for. Compare stays across booking sites and find the one that feels right.</p>
+          <div class="trust-note"><span class="trust-icon" aria-hidden="true">✓</span> Compare prices, perks &amp; guest ratings in one place</div>
+        </div>
+        <aside class="assistant-card" id="how-it-works" aria-label="How Routesaathi helps">
+          <div class="assistant-heading">
+            <span class="assistant-icon" aria-hidden="true">✳</span>
+            <div><p class="assistant-label">AI TRIP SIDEKICK</p><p class="assistant-title">Less searching, more wandering.</p></div>
+          </div>
+          <div class="assistant-line"><span>01</span><p>Share your destination and dates</p></div>
+          <div class="assistant-line"><span>02</span><p>Compare options from booking platforms</p></div>
+          <div class="assistant-line"><span>03</span><p>Pick the stay that fits your trip</p></div>
+          <div class="assistant-footer"><span class="live-dot"></span> Your shortlist, made simple</div>
+        </aside>
+      </section>
+
+      <section class="search-panel" id="search" aria-label="Search for a stay">
+        <form id="search-form">
+          <label class="search-field destination-field">
+            <span class="field-label"><span aria-hidden="true">⌖</span> WHERE TO?</span>
+            <input id="destination" name="destination" type="text" value="Goa, India" autocomplete="off" required>
+          </label>
+          <label class="search-field">
+            <span class="field-label"><span aria-hidden="true">▦</span> CHECK IN</span>
+            <input id="check-in" name="check-in" type="date" required>
+          </label>
+          <label class="search-field">
+            <span class="field-label"><span aria-hidden="true">▦</span> CHECK OUT</span>
+            <input id="check-out" name="check-out" type="date" required>
+          </label>
+          <label class="search-field guests-field">
+            <span class="field-label"><span aria-hidden="true">♙</span> WHO'S GOING?</span>
+            <select id="guests" name="guests">
+              <option>2 guests · 1 room</option>
+              <option>1 guest · 1 room</option>
+              <option>3 guests · 1 room</option>
+              <option>4 guests · 2 rooms</option>
+            </select>
+          </label>
+          <button class="search-button" type="submit"><span aria-hidden="true">✳</span> Find my stay</button>
+        </form>
+        <label class="prompt-field" for="trip-prompt">
+          <span class="prompt-icon" aria-hidden="true">✦</span>
+          <span class="prompt-label">Make it yours</span>
+          <input id="trip-prompt" type="text" placeholder="A quiet beach stay with breakfast under ₹8,000">
+          <span class="prompt-hint">Your preferences help rank the stays</span>
+        </label>
+      </section>
+
+      <section class="results-section" aria-labelledby="results-title">
+        <div class="results-topline">
+          <div>
+            <p class="eyebrow results-eyebrow">YOUR NEXT CHAPTER</p>
+            <h2 id="results-title">Stays in Goa, India <span class="results-count">04 handpicked stays</span></h2>
+          </div>
+          <label class="sort-control">Sort by
+            <select id="sort-select" aria-label="Sort stays">
+              <option value="recommended">Recommended</option>
+              <option value="price">Lowest price</option>
+              <option value="rating">Top rated</option>
+            </select>
+          </label>
+        </div>
+        <div class="results-toolbar">
+          <div class="filter-list" role="group" aria-label="Filter by stay type">
+            <button class="filter-button selected" type="button" data-filter="all" aria-pressed="true">All stays <span>04</span></button>
+            <button class="filter-button" type="button" data-filter="Hotel" aria-pressed="false">Hotels</button>
+            <button class="filter-button" type="button" data-filter="Resort" aria-pressed="false">Resorts</button>
+            <button class="filter-button" type="button" data-filter="Homestay" aria-pressed="false">Homestays</button>
+          </div>
+          <p class="results-note"><span aria-hidden="true">✳</span> Compare offers from multiple booking sites</p>
+        </div>
+        <p class="demo-notice">Preview with illustrative offers — prices and availability aren’t live.</p>
+        <div class="stay-grid" id="stay-grid" aria-live="polite"></div>
+        <p class="selection-message" id="selection-message" role="status" aria-live="polite"></p>
+      </section>
+
+      <section class="closing-note">
+        <span class="closing-icon" aria-hidden="true">✳</span>
+        <p>Good trips start with a good choice.</p>
+        <span>We make the choosing easier.</span>
+      </section>
+    </main>
+    <footer><a class="brand footer-brand" href="#"><span class="brand-mark" aria-hidden="true">r</span><span>routesaathi</span></a><p>Find your way to a stay you’ll love.</p><span>© Routesaathi</span></footer>
+  </body>
+</html>
