@@ -4,9 +4,8 @@
   "description": "RouteSaathi \u2014 AI-Powered Smart Multi-Modal Travel & Delay Intelligence Web Application across India",
   "private": true,
   "scripts": {
-    "dev": "vercel dev",
-    "start": "npx serve public"
-  },
+  "start": "npx serve public"
+},
   "engines": {
     "node": ">=18.0.0"
   },

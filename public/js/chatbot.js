@@ -1,181 +1,253 @@
-/**
- * RouteSaathi — Saathi AI Chatbot Frontend Controller
- */
-
 (function () {
-  const CHAT_ENDPOINT = '/api/chat';
-  let chatHistory = [];
+  const CHAT_ENDPOINT = "/api/chat";
+  const $ = (id) => document.getElementById(id);
 
-  document.addEventListener('DOMContentLoaded', function () {
-    const chatFab = document.getElementById('chatFab');
-    const chatWidget = document.getElementById('chatWidget');
-    const chatClose = document.getElementById('chatClose');
-    const chatForm = document.getElementById('chatForm');
-    const chatInput = document.getElementById('chatInput');
-    const chatMsgs = document.getElementById('chatMsgs');
-    const chatClear = document.getElementById('chatClear');
-    const chatKeyToggle = document.getElementById('chatKeyToggle');
-    const chatSettings = document.getElementById('chatSettings');
-    const chatLocalKey = document.getElementById('chatLocalKey');
-    const chatSaveKey = document.getElementById('chatSaveKey');
-    const chatClearKey = document.getElementById('chatClearKey');
-    const chatQuick = document.getElementById('chatQuick');
+  let history = [];
+  let isSending = false;
 
-    if (!chatFab || !chatWidget) return;
+  const chatWidget = $("chatWidget");
+  const chatFab = $("chatFab");
+  const chatNavBtn = $("chatNavBtn");
+  const chatClose = $("chatClose");
+  const chatClear = $("chatClear");
+  const chatForm = $("chatForm");
+  const chatInput = $("chatInput");
+  const chatMsgs = $("chatMsgs");
+  const chatQuick = $("chatQuick");
+  const chatSend = $("chatSend");
+  const chatValid = $("chatValid");
 
-    function toggleChat() {
-      const isHidden = chatWidget.hidden;
-      chatWidget.hidden = !isHidden;
-      chatFab.setAttribute('aria-expanded', String(isHidden));
-      if (isHidden && chatInput) {
-        chatInput.focus();
-        if (chatMsgs && chatMsgs.children.length === 0) {
-          appendMessage('assistant', 'Namaste! I am Saathi AI, RouteSaathi’s live AI travel assistant. Ask me about Indian multi-modal routes, train alternatives, fog delays, or your active search results.');
-        }
+  // Stop if the required HTML elements are missing.
+  if (
+    !chatWidget || !chatFab || !chatNavBtn ||
+    !chatClose || !chatForm || !chatInput || !chatMsgs
+  ) {
+    console.error("Saathi AI: Required chatbot HTML elements not found.");
+    return;
+  }
+
+  // Open chatbot
+  function openChat() {
+    chatWidget.hidden = false;
+    chatFab.setAttribute("aria-expanded", "true");
+    chatInput.focus();
+
+    if (chatMsgs.children.length === 0) {
+      addMessage(
+        "bot",
+        "Hello! I am Saathi AI. Ask me about Indian trains, flights, buses, routes, delays or alternative travel options."
+      );
+    }
+  }
+
+  // Close chatbot
+  function closeChat() {
+    chatWidget.hidden = true;
+    chatFab.setAttribute("aria-expanded", "false");
+  }
+
+  chatFab.addEventListener("click", openChat);
+  chatNavBtn.addEventListener("click", openChat);
+  chatClose.addEventListener("click", closeChat);
+
+  // Hide the old local API key option.
+  const keyToggle = $("chatKeyToggle");
+  if (keyToggle) keyToggle.hidden = true;
+
+  // Display a message safely.
+  function addMessage(type, message) {
+    const bubble = document.createElement("div");
+    bubble.className = `c-msg ${type}`;
+    bubble.textContent = message;
+
+    chatMsgs.appendChild(bubble);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+    return bubble;
+  }
+
+  // Loading animation
+  function showTyping() {
+    const typing = document.createElement("div");
+    typing.className = "c-msg bot";
+    typing.innerHTML =
+      '<span class="c-typing"><i></i><i></i><i></i></span>';
+
+    chatMsgs.appendChild(typing);
+    chatMsgs.scrollTop = chatMsgs.scrollHeight;
+
+    return typing;
+  }
+
+  // Read current travel details from the website.
+  function getTravelContext() {
+    return {
+      from: $("from")?.value || "",
+      to: $("to")?.value || "",
+      date: $("date")?.value || "",
+      passengers: $("paxVal")?.textContent || "1",
+      trainClass: $("clsSel")?.value || "",
+      weather: $("weatherSel")?.value || ""
+    };
+  }
+
+  // Send request to the backend.
+  async function callServer(message, context, recentHistory) {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 20000);
+
+    try {
+      const response = await fetch(CHAT_ENDPOINT, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        signal: controller.signal,
+        body: JSON.stringify({
+          message,
+          context,
+          history: recentHistory
+        })
+      });
+
+      const data = await response.json().catch(() => ({}));
+
+      if (!response.ok) {
+        throw new Error(
+          data.error || `Request failed: ${response.status}`
+        );
       }
+
+      if (!data.reply || typeof data.reply !== "string") {
+        throw new Error("The AI returned an empty response.");
+      }
+
+      return data.reply;
+
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  // Main message sending function.
+  async function sendMessage(message) {
+    message = message.trim();
+
+    if (!message || isSending) return;
+
+    if (message.length > 800) {
+      chatValid.textContent = "Message must be under 800 characters.";
+      return;
     }
 
-    chatFab.addEventListener('click', toggleChat);
-    if (chatClose) chatClose.addEventListener('click', toggleChat);
+    isSending = true;
+    chatValid.textContent = "";
+    chatInput.value = "";
+    chatSend.disabled = true;
+    chatInput.disabled = true;
 
-    if (chatKeyToggle && chatSettings) {
-      chatKeyToggle.addEventListener('click', () => {
-        chatSettings.hidden = !chatSettings.hidden;
-      });
+    addMessage("user", message);
+
+    const typing = showTyping();
+
+    try {
+      const context = getTravelContext();
+
+      const reply = await callServer(
+        message,
+        context,
+        history
+      );
+
+      typing.remove();
+      addMessage("bot", reply);
+
+      history.push(
+        { role: "user", content: message },
+        { role: "assistant", content: reply }
+      );
+
+      // Keep only the latest 10 conversation messages.
+      history = history.slice(-10);
+
+    } catch (error) {
+      typing.remove();
+
+      let errorMessage = "Unable to connect to Saathi AI.";
+
+      if (error.name === "AbortError") {
+        errorMessage = "Request timed out. Please try again.";
+      } else {
+        errorMessage = error.message || errorMessage;
+      }
+
+      addMessage("err", errorMessage);
+      console.error("Saathi AI error:", error);
+
+    } finally {
+      isSending = false;
+      chatSend.disabled = false;
+      chatInput.disabled = false;
+      chatInput.focus();
     }
+  }
 
-    if (chatSaveKey && chatLocalKey) {
-      chatSaveKey.addEventListener('click', () => {
-        const val = chatLocalKey.value.trim();
-        if (val) {
-          localStorage.setItem('routesaathi_groq_key', val);
-          alert('Local API key saved successfully!');
-          chatSettings.hidden = true;
-        }
-      });
-    }
+  // Submit message using Send button or Enter.
+  chatForm.addEventListener("submit", function (event) {
+    event.preventDefault();
+    sendMessage(chatInput.value);
+  });
 
-    if (chatClearKey && chatLocalKey) {
-      chatClearKey.addEventListener('click', () => {
-        localStorage.removeItem('routesaathi_groq_key');
-        chatLocalKey.value = '';
-        alert('Local API key reset.');
-      });
-    }
-
-    if (chatClear && chatMsgs) {
-      chatClear.addEventListener('click', () => {
-        chatMsgs.innerHTML = '';
-        chatHistory = [];
-        appendMessage('assistant', 'Conversation cleared. How can I help you today?');
-      });
-    }
-
-    function appendMessage(role, text) {
-      if (!chatMsgs) return;
-      const div = document.createElement('div');
-      div.className = role === 'user' ? 'chat-msg user' : 'chat-msg assistant';
-      div.textContent = text;
-      chatMsgs.appendChild(div);
-      chatMsgs.scrollTop = chatMsgs.scrollHeight;
-    }
-
-    const samplePrompts = [
-      'How do I pick a safe connection if direct trains are full?',
-      'What are the best winter fog delay buffers for Delhi-Kanpur?',
-      'How to book Volvo buses or check live seat status?'
+  // Quick suggestion buttons.
+  if (chatQuick) {
+    const suggestions = [
+      "Suggest an alternative route",
+      "How can I avoid train delays?",
+      "Best way to travel from Jaipur to Delhi?",
+      "What if my train is cancelled?"
     ];
-    if (chatQuick) {
-      chatQuick.innerHTML = '';
-      samplePrompts.forEach(p => {
-        const btn = document.createElement('button');
-        btn.type = 'button';
-        btn.className = 'chat-quick-btn';
-        btn.textContent = p;
-        btn.addEventListener('click', () => {
-          if (chatInput) {
-            chatInput.value = p;
-            chatForm.requestSubmit();
-          }
-        });
-        chatQuick.appendChild(btn);
+
+    suggestions.forEach((suggestion) => {
+      const button = document.createElement("button");
+      button.type = "button";
+      button.textContent = suggestion;
+
+      button.addEventListener("click", () => {
+        sendMessage(suggestion);
       });
-    }
 
-    if (chatForm && chatInput) {
-      chatForm.addEventListener('submit', async (e) => {
-        e.preventDefault();
-        const text = chatInput.value.trim();
-        if (!text || text.length < 2) return;
+      chatQuick.appendChild(button);
+    });
+  }
 
-        appendMessage('user', text);
-        chatInput.value = '';
+  // Clear conversation.
+  if (chatClear) {
+    chatClear.addEventListener("click", function () {
+      history = [];
+      chatMsgs.innerHTML = "";
+      chatValid.textContent = "";
 
-        let currentContext = {};
-        try {
-          if (window.RouteSaathiApp && typeof window.RouteSaathiApp.getState === 'function') {
-            currentContext = window.RouteSaathiApp.getState();
-          }
-        } catch (err) {}
+      addMessage(
+        "bot",
+        "Conversation cleared. How can I help you with your journey?"
+      );
+    });
+  }
 
-        const localKey = localStorage.getItem('routesaathi_groq_key') || '';
-
-        const loadingId = 'load_' + Date.now();
-        const loadDiv = document.createElement('div');
-        loadDiv.id = loadingId;
-        loadDiv.className = 'chat-msg assistant loading-msg';
-        loadDiv.textContent = 'Saathi AI is thinking...';
-        chatMsgs.appendChild(loadDiv);
-        chatMsgs.scrollTop = chatMsgs.scrollHeight;
-
-        try {
-          let reply = '';
-          if (localKey) {
-            const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Bearer ${localKey}`
-              },
-              body: JSON.stringify({
-                model: 'llama3-8b-8192', // UPDATED MODEL HERE
-                messages: [
-                  { role: 'system', content: 'You are Saathi AI, expert Indian travel assistant for RouteSaathi.' },
-                  ...chatHistory,
-                  { role: 'user', content: text }
-                ],
-                temperature: 0.6,
-                max_tokens: 512
-              })
-            });
-            const data = await resp.json();
-            if (!resp.ok) throw new Error(data?.error?.message || `HTTP ${resp.status}`);
-            reply = data?.choices?.[0]?.message?.content?.trim();
-          } else {
-            const resp = await fetch(CHAT_ENDPOINT, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ message: text, context: currentContext, history: chatHistory })
-            });
-            const data = await resp.json();
-            if (!resp.ok) throw new Error(data?.error || `HTTP error ${resp.status}`);
-            reply = data.reply;
-          }
-
-          const el = document.getElementById(loadingId);
-          if (el) el.remove();
-
-          appendMessage('assistant', reply);
-          chatHistory.push({ role: 'user', content: text });
-          chatHistory.push({ role: 'assistant', content: reply });
-          if (chatHistory.length > 10) chatHistory = chatHistory.slice(-10);
-
-        } catch (err) {
-          const el = document.getElementById(loadingId);
-          if (el) el.remove();
-          appendMessage('assistant', '⚠️ Unable to reach AI model: ' + err.message);
-        }
-      });
+  // Close chatbot using Escape.
+  document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape" && !chatWidget.hidden) {
+      closeChat();
     }
   });
+
+  // Public API
+  window.RouteSaathiAI = {
+    sendMessage: function (message, context = {}, recentHistory = []) {
+      return callServer(message, context, recentHistory);
+    }
+  };
+
+  console.log("Saathi AI chatbot initialized successfully.");
+
 })();
