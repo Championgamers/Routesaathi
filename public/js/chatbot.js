@@ -1,10 +1,48 @@
 /**
- * RouteSaathi — Frontend Chatbot JS using Groq API
+ * RouteSaathi — Complete Chatbot Frontend (UI Toggle + Groq API Integration)
  */
 
-(function () {
+document.addEventListener('DOMContentLoaded', function () {
   const CHAT_ENDPOINT = '/api/chat';
 
+  // DOM Elements (Safely selected)
+  const chatToggleBtn = document.getElementById('chat-toggle') || document.querySelector('.chat-toggle-btn') || document.querySelector('[data-chat-toggle]');
+  const chatWindow = document.getElementById('chat-window') || document.getElementById('chatbot-container') || document.querySelector('.chatbot-box');
+  const chatCloseBtn = document.getElementById('chat-close') || document.querySelector('.chat-close-btn');
+  const chatForm = document.getElementById('chat-form') || document.querySelector('.chat-input-form');
+  const chatInput = document.getElementById('chat-input') || document.querySelector('.chat-text-input');
+  const chatMessages = document.getElementById('chat-messages') || document.querySelector('.chat-messages-area');
+
+  // Toggle Chat Window Open/Close
+  function toggleChat() {
+    if (!chatWindow) return;
+    if (chatWindow.style.display === 'none' || chatWindow.style.display === '' || chatWindow.classList.contains('hidden')) {
+      chatWindow.style.display = 'flex';
+      chatWindow.classList.remove('hidden');
+      if (chatInput) chatInput.focus();
+    } else {
+      chatWindow.style.display = 'none';
+      chatWindow.classList.add('hidden');
+    }
+  }
+
+  // Event Listeners for UI
+  if (chatToggleBtn) {
+    chatToggleBtn.addEventListener('click', toggleChat);
+  }
+  // Fallback global handler if button uses onclick
+  window.toggleRouteSaathiChat = toggleChat;
+
+  if (chatCloseBtn) {
+    chatCloseBtn.addEventListener('click', function () {
+      if (chatWindow) {
+        chatWindow.style.display = 'none';
+        chatWindow.classList.add('hidden');
+      }
+    });
+  }
+
+  // API Call to Groq Serverless Function
   async function callGroqServerless(message, context, recentHistory) {
     const controller = new AbortController();
     const timer = setTimeout(() => controller.abort(), 20000);
@@ -26,53 +64,10 @@
     }
   }
 
-  async function callGeminiDirect(message, context, recentHistory, apiKey) {
-    const sysText = [
-      'You are Saathi AI, the official multi-modal Indian travel assistant inside RouteSaathi.',
-      'Give concise, practical advice about Indian trains, flights, buses, cabs, and seasonal delays.',
-      'Active RouteSaathi App Context: ' + JSON.stringify(context)
-    ].join('\n');
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), 20000);
-
-    try {
-      const resp = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`
-        },
-        signal: controller.signal,
-        body: JSON.stringify({
-          model: 'llama3-8b-8192',
-          messages: [
-            { role: 'system', content: sysText },
-            ...recentHistory,
-            { role: 'user', content: message }
-          ],
-          temperature: 0.6,
-          max_tokens: 512
-        })
-      });
-      const data = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
-        throw new Error(data?.error?.message || `HTTP ${resp.status}`);
-      }
-      const reply = data?.choices?.[0]?.message?.content?.trim();
-      if (!reply) throw new Error('Empty response received from AI model.');
-      return reply;
-    } finally {
-      clearTimeout(timer);
-    }
-  }
-
+  // Global export for any external scripts
   window.RouteSaathiAI = {
-    sendMessage: async function (message, context, history, customKey) {
-      if (customKey && customKey.trim()) {
-        return await callGeminiDirect(message, context, history, customKey.trim());
-      }
+    sendMessage: async function (message, context, history) {
       return await callGroqServerless(message, context, history);
     }
   };
-})();
+});
